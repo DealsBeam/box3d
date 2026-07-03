@@ -1,0 +1,3 @@
+## 2026-07-03 - Redundant Rotation in Contact Solver
+**Learning:** In the contact solver, calculating the current separation of contact points involves rotating the anchor points from local to world space. For a manifold with multiple points, rotating each anchor separately is expensive. By using the identity `dot(n, rot(q, r)) = dot(invRot(q, n), r)`, the rotation of the normal (one per body per manifold) can be pre-calculated, allowing the inner loop to use simple dot products.
+**Action:** Always look for ways to move transformations out of inner loops by transforming the "query" vector into the local space of the transformation.
