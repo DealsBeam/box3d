@@ -45,10 +45,36 @@ static void MinProfile( b3Profile* p1, const b3Profile* p2 )
 	p1->step = b3MinFloat( p1->step, p2->step );
 	p1->pairs = b3MinFloat( p1->pairs, p2->pairs );
 	p1->collide = b3MinFloat( p1->collide, p2->collide );
+	p1->solve = b3MinFloat( p1->solve, p2->solve );
+	p1->solverSetup = b3MinFloat( p1->solverSetup, p2->solverSetup );
 	p1->constraints = b3MinFloat( p1->constraints, p2->constraints );
+	p1->prepareConstraints = b3MinFloat( p1->prepareConstraints, p2->prepareConstraints );
+	p1->integrateVelocities = b3MinFloat( p1->integrateVelocities, p2->integrateVelocities );
+	p1->warmStart = b3MinFloat( p1->warmStart, p2->warmStart );
+	p1->solveImpulses = b3MinFloat( p1->solveImpulses, p2->solveImpulses );
+	p1->integratePositions = b3MinFloat( p1->integratePositions, p2->integratePositions );
+	p1->relaxImpulses = b3MinFloat( p1->relaxImpulses, p2->relaxImpulses );
+	p1->applyRestitution = b3MinFloat( p1->applyRestitution, p2->applyRestitution );
+	p1->storeImpulses = b3MinFloat( p1->storeImpulses, p2->storeImpulses );
+	p1->splitIslands = b3MinFloat( p1->splitIslands, p2->splitIslands );
 	p1->transforms = b3MinFloat( p1->transforms, p2->transforms );
+	p1->sensorHits = b3MinFloat( p1->sensorHits, p2->sensorHits );
+	p1->jointEvents = b3MinFloat( p1->jointEvents, p2->jointEvents );
+	p1->hitEvents = b3MinFloat( p1->hitEvents, p2->hitEvents );
 	p1->refit = b3MinFloat( p1->refit, p2->refit );
+	p1->bullets = b3MinFloat( p1->bullets, p2->bullets );
 	p1->sleepIslands = b3MinFloat( p1->sleepIslands, p2->sleepIslands );
+	p1->sensors = b3MinFloat( p1->sensors, p2->sensors );
+}
+
+static void PrintProfile( const b3Profile* p )
+{
+	printf( "step: %g, pairs: %g, collide: %g, solve: %g, transforms: %g\n", p->step, p->pairs, p->collide, p->solve,
+			p->transforms );
+	printf( "  solve: setup: %g, constraints: %g, integrate v: %g, warm start: %g, solve impulses: %g\n", p->solverSetup,
+			p->constraints, p->integrateVelocities, p->warmStart, p->solveImpulses );
+	printf( "  solve: integrate p: %g, relax impulses: %g, apply restitution: %g, store impulses: %g, split: %g\n",
+			p->integratePositions, p->relaxImpulses, p->applyRestitution, p->storeImpulses, p->splitIslands );
 }
 
 // Box3D benchmark application. On Windows it is important to use affinity avoid cross CCD
@@ -281,6 +307,38 @@ int main( int argc, char** argv )
 				{
 					counters = b3World_GetCounters( worldId );
 					countersAcquired = true;
+				}
+
+				if ( runIndex == runCount - 1 )
+				{
+					b3Profile totalProfile = { 0 };
+					for ( int i = 0; i < stepCount; ++i )
+					{
+						totalProfile.step += profiles[i].step;
+						totalProfile.pairs += profiles[i].pairs;
+						totalProfile.collide += profiles[i].collide;
+						totalProfile.solve += profiles[i].solve;
+						totalProfile.solverSetup += profiles[i].solverSetup;
+						totalProfile.constraints += profiles[i].constraints;
+						totalProfile.prepareConstraints += profiles[i].prepareConstraints;
+						totalProfile.integrateVelocities += profiles[i].integrateVelocities;
+						totalProfile.warmStart += profiles[i].warmStart;
+						totalProfile.solveImpulses += profiles[i].solveImpulses;
+						totalProfile.integratePositions += profiles[i].integratePositions;
+						totalProfile.relaxImpulses += profiles[i].relaxImpulses;
+						totalProfile.applyRestitution += profiles[i].applyRestitution;
+						totalProfile.storeImpulses += profiles[i].storeImpulses;
+						totalProfile.splitIslands += profiles[i].splitIslands;
+						totalProfile.transforms += profiles[i].transforms;
+						totalProfile.sensorHits += profiles[i].sensorHits;
+						totalProfile.jointEvents += profiles[i].jointEvents;
+						totalProfile.hitEvents += profiles[i].hitEvents;
+						totalProfile.refit += profiles[i].refit;
+						totalProfile.bullets += profiles[i].bullets;
+						totalProfile.sleepIslands += profiles[i].sleepIslands;
+						totalProfile.sensors += profiles[i].sensors;
+					}
+					PrintProfile( &totalProfile );
 				}
 
 				if ( benchmark->destroyFcn != NULL )

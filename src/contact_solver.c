@@ -415,6 +415,11 @@ void b3SolveContacts_Mesh( b3SolverBlock block, b3StepContext* context, bool use
 			float totalNormalImpulse = 0.0f;
 			float totalTwistLimit = 0.0f;
 
+			// Optimized separation calculation: dot(n, rot(q, r)) = dot(invRot(q, n), r)
+			b3Vec3 nA = b3InvRotateVector( dqA, normal );
+			b3Vec3 nB = b3InvRotateVector( dqB, normal );
+			float dot_n_dp = b3Dot( normal, dp );
+
 			for ( int pointIndex = 0; pointIndex < pointCount; ++pointIndex )
 			{
 				b3ManifoldConstraintPoint* cp = constraint->points + pointIndex;
@@ -425,8 +430,7 @@ void b3SolveContacts_Mesh( b3SolverBlock block, b3StepContext* context, bool use
 
 				// compute current separation
 				// this is subject to round-off error if the anchor is far from the body center of mass
-				b3Vec3 ds = b3Add( dp, b3Sub( b3RotateVector( dqB, rB ), b3RotateVector( dqA, rA ) ) );
-				float s = b3Dot( ds, normal ) + cp->baseSeparation;
+				float s = dot_n_dp + b3Dot( nB, rB ) - b3Dot( nA, rA ) + cp->baseSeparation;
 
 				float velocityBias = 0.0f;
 				float massScale = 1.0f;
@@ -1319,6 +1323,22 @@ static inline b3Vec3W b3RotateVectorW( b3QuatW q, b3Vec3W a )
 	return b;
 }
 
+static inline b3Vec3W b3InvRotateVectorW( b3QuatW q, b3Vec3W a )
+{
+	b3Vec3W t1 = b3CrossW( q.V, a );
+	b3Vec3W t2;
+	t2.X = b3SubW( t1.X, b3MulW( q.S, a.X ) );
+	t2.Y = b3SubW( t1.Y, b3MulW( q.S, a.Y ) );
+	t2.Z = b3SubW( t1.Z, b3MulW( q.S, a.Z ) );
+	b3Vec3W t3 = b3CrossW( q.V, t2 );
+	b3FloatW two = b3SplatW( 2.0f );
+	b3Vec3W b;
+	b.X = b3MulAddW( a.X, two, t3.X );
+	b.Y = b3MulAddW( a.Y, two, t3.Y );
+	b.Z = b3MulAddW( a.Z, two, t3.Z );
+	return b;
+}
+
 // Soft contact constraints with sub-stepping support
 // Uses fixed anchors for Jacobians for better behavior on rolling shapes (circles & capsules)
 // http://mmacklin.com/smallsteps.pdf
@@ -2009,6 +2029,11 @@ void b3SolveContacts_Convex( b3SolverBlock block, b3StepContext* context, bool u
 		b3FloatW totalNormalImpulse = b3ZeroW();
 		b3FloatW totalTwistLimit = b3ZeroW();
 
+		// Optimized separation calculation: dot(n, rot(q, r)) = dot(invRot(q, n), r)
+		b3Vec3W nA = b3InvRotateVectorW( bA.dq, c->normal );
+		b3Vec3W nB = b3InvRotateVectorW( bB.dq, c->normal );
+		b3FloatW dot_n_dp = b3DotW( c->normal, dp );
+
 		// todo_erin use the max point count of the four manifolds
 		for ( int pointIndex = 0; pointIndex < B3_MAX_MANIFOLD_POINTS; ++pointIndex )
 		{
@@ -2018,15 +2043,9 @@ void b3SolveContacts_Convex( b3SolverBlock block, b3StepContext* context, bool u
 			b3Vec3W rA = cp->anchorAs;
 			b3Vec3W rB = cp->anchorBs;
 
-			// Moving anchors for current separation
-			// todo speed this up using matrices
-			b3Vec3W rsA = b3RotateVectorW( bA.dq, rA );
-			b3Vec3W rsB = b3RotateVectorW( bB.dq, rB );
-
 			// compute current separation
 			// this is subject to round-off error if the anchor is far from the body center of mass
-			b3Vec3W ds = b3AddVW( dp, b3SubVW( rsB, rsA ) );
-			b3FloatW s = b3AddW( b3DotW( c->normal, ds ), cp->baseSeparations );
+			b3FloatW s = b3AddW( b3AddW( b3SubW( dot_n_dp, b3DotW( nA, rA ) ), b3DotW( nB, rB ) ), cp->baseSeparations );
 
 			// Apply speculative bias if separation is greater than zero, otherwise apply soft constraint bias
 			b3FloatW mask = b3GreaterThanW( s, b3ZeroW() );
