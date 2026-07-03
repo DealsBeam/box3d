@@ -415,7 +415,6 @@ void b3SolveContacts_Mesh( b3SolverBlock block, b3StepContext* context, bool use
 			float totalNormalImpulse = 0.0f;
 			float totalTwistLimit = 0.0f;
 
-			// Optimized separation calculation: dot(n, rot(q, r)) = dot(invRot(q, n), r)
 			b3Vec3 nA = b3InvRotateVector( dqA, normal );
 			b3Vec3 nB = b3InvRotateVector( dqB, normal );
 			float dot_n_dp = b3Dot( normal, dp );
@@ -2026,13 +2025,12 @@ void b3SolveContacts_Convex( b3SolverBlock block, b3StepContext* context, bool u
 
 		b3Vec3W dp = b3SubVW( bB.dp, bA.dp );
 
-		b3FloatW totalNormalImpulse = b3ZeroW();
-		b3FloatW totalTwistLimit = b3ZeroW();
-
-		// Optimized separation calculation: dot(n, rot(q, r)) = dot(invRot(q, n), r)
 		b3Vec3W nA = b3InvRotateVectorW( bA.dq, c->normal );
 		b3Vec3W nB = b3InvRotateVectorW( bB.dq, c->normal );
 		b3FloatW dot_n_dp = b3DotW( c->normal, dp );
+
+		b3FloatW totalNormalImpulse = b3ZeroW();
+		b3FloatW totalTwistLimit = b3ZeroW();
 
 		// todo_erin use the max point count of the four manifolds
 		for ( int pointIndex = 0; pointIndex < B3_MAX_MANIFOLD_POINTS; ++pointIndex )
@@ -2043,6 +2041,8 @@ void b3SolveContacts_Convex( b3SolverBlock block, b3StepContext* context, bool u
 			b3Vec3W rA = cp->anchorAs;
 			b3Vec3W rB = cp->anchorBs;
 
+			// Moving anchors for current separation
+			// todo speed this up using matrices
 			// compute current separation
 			// this is subject to round-off error if the anchor is far from the body center of mass
 			b3FloatW s = b3AddW( b3AddW( b3SubW( dot_n_dp, b3DotW( nA, rA ) ), b3DotW( nB, rB ) ), cp->baseSeparations );
